@@ -1,5 +1,10 @@
 from flask import Flask, jsonify
 import instaloader
+import os
+import requests
+
+ACCESS_TOKEN = os.getenv('ACCESS_TOKEN') 
+MY_IG_ACCOUNT_ID = os.getenv('MY_IG_ACCOUNT_ID')
 
 app = Flask(__name__)
 
@@ -8,6 +13,37 @@ def index():
     return "OK", 200
 
 def fetch_instagram_profile(username):
+    url = f"https://graph.facebook.com/v18.0/{MY_IG_ACCOUNT_ID}"
+    params = {
+        'fields': f"business_discovery.username({username}){{followers_count}}",
+        'access_token': ACCESS_TOKEN
+    }
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+        # データが正常に取得できたかチェック
+        if 'business_discovery' in data:
+            followers = data['business_discovery']['followers_count']
+            print(f"@{username} のフォロワー数: {followers}")
+            return {
+                "success": True,
+                "data": data['business_discovery']
+            }, 200
+        else:
+            print("エラー: データの取得に失敗しました。")
+            print(f"詳細: {data}")
+            return {
+                "success": False,
+                "error": f"@{username} というアカウントは見つかりませんでした。"
+            }, 404
+    except requests.exceptions.RequestException as e:
+        print(f"通信エラーが発生しました: {e}")
+        return {
+            "success": False,
+            "error": f"予期せぬエラーが発生しました: {str(e)}"
+        }, 500
+
+def void_fetch_instagram_profile(username):
     """
     Instaloaderを使用してプロフィール情報を取得する内部関数
     """
